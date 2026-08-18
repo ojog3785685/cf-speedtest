@@ -16,15 +16,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download CloudflareST
+      - name: Download and Run CloudflareST
         run: |
-          wget -O cfst.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz
-          tar -zxf cfst.tar.gz
-          chmod +x cfst
-
-      - name: Run Speed Test
-        run: |
-          ./cfst -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
+          # 1. 下载官方正版测速程序
+          wget -q -O CloudflareST.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/CloudflareST_linux_amd64.tar.gz
+          tar -zxf CloudflareST.tar.gz
+          chmod +x CloudflareST
+          
+          # 2. 开始测速并输出前 10 个最快 IP
+          ./CloudflareST -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
+          
+          # 3. 转换格式为订阅可用列表
           echo "# Private Auto BestCF IPs" > ips.txt
           awk -F',' 'NR>1 {print $1 ":443#" $1 "-" $6 "MB/s"}' result.csv >> ips.txt
 
@@ -33,5 +35,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add ips.txt
-          git diff --staged --quiet || git commit -m "Auto update best IP"
+          git commit -m "Auto update best IP" || echo "No changes"
           git push
