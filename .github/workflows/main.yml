@@ -16,17 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and Run CloudflareSpeedTest
+      - name: Download and Run SpeedTest
         run: |
-          # 1. 下载官方正版编译包
-          wget -q -O cfst.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz
+          # 1. 使用 curl 强制追踪真实下载地址并解压
+          curl -sL "https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz" -o cfst.tar.gz
           tar -zxf cfst.tar.gz
-          chmod +x cfst
           
-          # 2. 真实测速挑选前 10 个最快 IP
-          ./cfst -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
+          # 2. 自动定位解压出来的测速程序并赋予权限
+          BIN=$(find . -maxdepth 1 -type f \( -name "cfst" -o -name "CloudflareST" \) | head -n 1)
+          chmod +x "$BIN"
           
-          # 3. 转换为订阅格式
+          # 3. 运行测速筛选出前 10 个最快 IP
+          "$BIN" -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
+          
+          # 4. 生成订阅文件
           echo "# Private Auto BestCF IPs" > ips.txt
           awk -F',' 'NR>1 {print $1 ":443#" $1 "-" $6 "MB/s"}' result.csv >> ips.txt
 
