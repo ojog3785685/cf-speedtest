@@ -2,9 +2,9 @@ name: Cloudflare SpeedTest Auto
 
 on:
   schedule:
-    # 每天北京时间凌晨 04:00 自动运行一次测速 (UTC 20:00)
+    # 每天北京时间凌晨 04:00 自动运行一次 (UTC 20:00)
     - cron: '0 20 * * *'
-  workflow_dispatch: # 支持随时手动点击立即运行
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,20 +13,18 @@ jobs:
   speedtest:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and Run CloudflareSpeedTest
+      - name: Download CloudflareST
         run: |
-          # 始终下载官方最新版的测速程序
-          curl -sL -o cfst.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz
+          wget -O cfst.tar.gz https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz
           tar -zxf cfst.tar.gz
           chmod +x cfst
-          
-          # 执行测速：挑选延迟低且速度最好的 10 个优质 IP
-          ./cfst -tp 443 -url https://speed.cloudflare.com/__down?bytes=25000000 -dn 10 -tl 300 -o result.csv
-          
-          # 格式化输出为订阅可用格式
+
+      - name: Run Speed Test
+        run: |
+          ./cfst -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
           echo "# Private Auto BestCF IPs" > ips.txt
           awk -F',' 'NR>1 {print $1 ":443#" $1 "-" $6 "MB/s"}' result.csv >> ips.txt
 
@@ -35,5 +33,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add ips.txt
-          git commit -m "Auto update best IP [skip ci]" || exit 0
+          git diff --staged --quiet || git commit -m "Auto update best IP"
           git push
