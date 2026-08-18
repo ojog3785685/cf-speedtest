@@ -18,18 +18,15 @@ jobs:
 
       - name: Download and Run SpeedTest
         run: |
-          # 1. 使用 curl 强制追踪真实下载地址并解压
-          curl -sL "https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz" -o cfst.tar.gz
-          tar -zxf cfst.tar.gz
+          # 1. 直接下载官方最稳定的 v2.2.5 版本
+          wget https://github.com/XIU2/CloudflareSpeedTest/releases/download/v2.2.5/CloudflareST_linux_amd64.tar.gz -O cfst.tar.gz
+          tar -zxvf cfst.tar.gz
+          chmod +x CloudflareST
           
-          # 2. 自动定位解压出来的测速程序并赋予权限
-          BIN=$(find . -maxdepth 1 -type f \( -name "cfst" -o -name "CloudflareST" \) | head -n 1)
-          chmod +x "$BIN"
+          # 2. 开始真机测速挑选前 10 个最快 IP
+          ./CloudflareST -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
           
-          # 3. 运行测速筛选出前 10 个最快 IP
-          "$BIN" -tp 443 -url https://speed.cloudflare.com/__down?bytes=10000000 -dn 10 -tl 300 -o result.csv
-          
-          # 4. 生成订阅文件
+          # 3. 转换为订阅格式
           echo "# Private Auto BestCF IPs" > ips.txt
           awk -F',' 'NR>1 {print $1 ":443#" $1 "-" $6 "MB/s"}' result.csv >> ips.txt
 
